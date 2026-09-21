@@ -174,6 +174,7 @@ services:
   # engineering-workstation) can bypass the HMI web UI entirely with a
   # real Modbus client (mbtget, pymodbus, etc).
   rtu-a:
+    <<: *host-gateway
     build: ./rtu-a
     networks: [substations]
     environment:
@@ -183,6 +184,7 @@ services:
   # Real IEC 60870-5-104 server for Substation B — see rtu-b/server.py for
   # why this protocol was chosen over Modbus/DNP3 for this substation.
   rtu-b:
+    <<: *host-gateway
     build: ./rtu-b
     networks: [substations]
     environment:

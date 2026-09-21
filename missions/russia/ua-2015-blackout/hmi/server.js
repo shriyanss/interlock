@@ -100,7 +100,7 @@ function sendIec104Command(address, turnOn) {
     execFile(
       "python3",
       [path.join(__dirname, "iec104_client.py"), RTU_B_HOST, RTU_B_PORT, "1", String(address), turnOn ? "on" : "off"],
-      { timeout: 10_000 },
+      { timeout: 20_000 },
       (err) => (err ? reject(err) : resolve()),
     );
   });
