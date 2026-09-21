@@ -7,8 +7,8 @@ const grid: GridState = {
       id: "sub-a",
       name: "Substation A",
       breakers: [
-        { id: "brk-a1", name: "BRK-A1", state: "CLOSED", load_mw: 10, customers: 5000, criticality: "residential" },
-        { id: "brk-a2", name: "BRK-A2", state: "CLOSED", load_mw: 5, customers: 1, criticality: "hospital" },
+        { id: "brk-a1", name: "BRK-A1", tag: "FDR-1", state: "CLOSED", load_mw: 10, customers: 5000, criticality: "residential" },
+        { id: "brk-a2", name: "BRK-A2", tag: "FDR-2", state: "CLOSED", load_mw: 5, customers: 1, criticality: "hospital" },
       ],
     },
   ],

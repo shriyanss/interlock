@@ -3,11 +3,16 @@ export type Criticality = "residential" | "hospital" | "industrial";
 
 export interface Breaker {
   id: string;
+  /** Human-readable label — shown in the portal/debrief, deliberately withheld from the HMI's own view so a player has to work out identity from the point list. */
   name: string;
+  /** Obfuscated identifier a player actually sees on the HMI (e.g. a raw tag/address) — carries no hint of purpose or criticality. */
+  tag: string;
   state: BreakerState;
   load_mw: number;
   customers: number;
   criticality: Criticality;
+  /** Decoys exist on the diagram but aren't part of any mission objective — opening one still costs points as an unintended action. */
+  decoy?: boolean;
 }
 
 export interface Substation {

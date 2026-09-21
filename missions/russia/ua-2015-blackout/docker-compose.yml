@@ -149,15 +149,66 @@ services:
       CONTROLLER_URL: http://host.docker.internal:4000
     volumes:
       - ./ot/jump-host/custom-cont-init.d:/custom-cont-init.d:ro
+      # Discoverable point-list — what a player needs to read before they
+      # can tell the required feeders from the hospital feeder and the
+      # decoys on the HMI (which shows only obfuscated tags). Fictional
+      # gameplay artifact, not a real engineering document.
+      - ./ot/jump-host/point-list.txt:/config/point-list.txt:ro
 
   hmi:
     <<: *host-gateway
     build: ./hmi
-    networks: [control]
+    # Also on `substations`: the HMI is the protocol gateway, speaking
+    # real Modbus/IEC 104 to the RTUs on the player's behalf when they use
+    # the web UI — see rtu-a/rtu-b below.
+    networks: [control, substations]
     environment:
       SESSION_ID: ${SESSION_ID:-}
       CONTROLLER_URL: http://host.docker.internal:4000
       CONTROLLER_PUBLIC_URL: http://${ENTRYPOINT_HOST:-localhost}:4000
+      RTU_A_HOST: rtu-a
+      RTU_B_HOST: rtu-b
+
+  # Real Modbus TCP server for Substation A. No auth — as real Modbus is —
+  # so a player who reaches `substations` directly (via
+  # engineering-workstation) can bypass the HMI web UI entirely with a
+  # real Modbus client (mbtget, pymodbus, etc).
+  rtu-a:
+    build: ./rtu-a
+    networks: [substations]
+    environment:
+      SESSION_ID: ${SESSION_ID:-}
+      CONTROLLER_URL: http://host.docker.internal:4000
+
+  # Real IEC 60870-5-104 server for Substation B — see rtu-b/server.py for
+  # why this protocol was chosen over Modbus/DNP3 for this substation.
+  rtu-b:
+    build: ./rtu-b
+    networks: [substations]
+    environment:
+      SESSION_ID: ${SESSION_ID:-}
+      CONTROLLER_URL: http://host.docker.internal:4000
+
+  # Represents the engineering workstation an OT engineer would use to
+  # configure PLCs/RTUs directly — distinct from the operator-facing HMI.
+  # Reuses ops.admin's credential (documented simplification — see
+  # DEVELOPMENT.md) rather than requiring a whole separate LDAP-discovery
+  # sub-step. Reachable once a player finds it via `nmap` on `control`,
+  # same as jump-host; from a shell here a player has direct L3 reach to
+  # `substations` and can port-forward their own tools straight at the
+  # RTUs, bypassing the HMI entirely.
+  engineering-workstation:
+    <<: *host-gateway
+    image: lscr.io/linuxserver/openssh-server:latest
+    networks: [control, substations]
+    environment:
+      PUID: "1000"
+      PGID: "1000"
+      USER_NAME: ops.admin
+      USER_PASSWORD: "ChangeMe!2015"
+      PASSWORD_ACCESS: "true"
+    volumes:
+      - ./ot/engineering-workstation/custom-cont-init.d:/custom-cont-init.d:ro
 
   defender:
     <<: *host-gateway

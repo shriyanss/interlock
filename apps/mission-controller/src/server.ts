@@ -40,6 +40,8 @@ function statePayload(session: SessionState) {
     requiredEffectAchieved: session.requiredEffectAchieved,
     entrypointUrl: session.entrypointUrl,
     expiresAt: session.expiresAt,
+    outcome: session.outcome,
+    failureReason: session.failureReason,
     grid: session.grid,
   };
 }
@@ -132,6 +134,15 @@ app.post<{ Params: { id: string }; Body: { substationId: string; breakerId: stri
     const { substationId, breakerId, newState } = req.body;
     toggleBreaker(session, substationId, breakerId, newState);
     broadcast(session.id);
+
+    if (session.outcome === "failed") {
+      // Notify the client before tearing anything down — deleting the
+      // session first would leave broadcast() with nothing to send to.
+      await teardownLab(composePathFor(session.missionSlug));
+      deleteSession(session.id);
+      return reply.send({ ok: true });
+    }
+
     if (session.requiredEffectAchieved) {
       finalizeSession(session);
       broadcast(session.id);

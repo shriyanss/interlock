@@ -6,69 +6,102 @@
 <style>
   body { background:#0d1117; color:#c9d1d9; font-family: monospace; margin:0; padding:20px; }
   h1 { font-size:16px; color:#58a6ff; border-bottom:1px solid #30363d; padding-bottom:8px; }
-  .substation { border:1px solid #30363d; margin:12px 0; padding:12px; }
-  .substation h2 { font-size:13px; color:#8b949e; margin:0 0 8px; }
-  .breaker { display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-top:1px solid #21262d; }
+  p.warn { color:#8b949e; font-size:12px; }
+  table { width:100%; border-collapse: collapse; margin-top:12px; }
+  th { text-align:left; color:#8b949e; font-size:11px; border-bottom:1px solid #30363d; padding:6px 4px; }
+  td { padding:6px 4px; border-top:1px solid #21262d; }
   .state-CLOSED { color:#3fb950; }
   .state-OPEN { color:#f85149; }
   button { background:#21262d; color:#c9d1d9; border:1px solid #30363d; padding:4px 10px; cursor:pointer; font-family:monospace; }
   button:hover { background:#30363d; }
-  #status { margin-top:16px; font-size:12px; color:#8b949e; }
+  button:disabled { opacity:0.4; cursor:not-allowed; }
+  tr.selected { background:#161b22; }
+  #confirm { display:none; margin-top:16px; border:1px solid #f0883e; padding:12px; max-width:480px; }
+  #confirm h2 { font-size:13px; color:#f0883e; margin:0 0 8px; }
+  #status { margin-top:16px; font-size:12px; color:#8b949e; min-height:16px; }
 </style>
 </head>
 <body>
-  <h1>DISTRIBUTION CONTROL — ONE-LINE DIAGRAM</h1>
-  <div id="grid">Loading…</div>
+  <h1>DISTRIBUTION CONTROL — POINT LIST</h1>
+  <p class="warn">
+    Points are identified by tag only. Cross-reference against the site
+    point-list before issuing any command — commanding the wrong point may
+    have irreversible consequences.
+  </p>
+  <table>
+    <thead><tr><th>TAG</th><th>STATE</th><th></th></tr></thead>
+    <tbody id="rows"><tr><td colspan="3">Loading…</td></tr></tbody>
+  </table>
+
+  <div id="confirm">
+    <h2>CONFIRM COMMAND</h2>
+    <div id="confirm-text"></div>
+    <div style="margin-top:10px;">
+      <button id="confirm-yes">EXECUTE</button>
+      <button id="confirm-no">CANCEL</button>
+    </div>
+  </div>
+
   <div id="status"></div>
 
 <script>
-let config = null;
-
-async function init() {
-  config = await (await fetch('/config')).json();
-  if (!config.sessionId) {
-    document.getElementById('status').textContent = 'No session linked to this HMI instance.';
-    return;
-  }
-  refresh();
-  setInterval(refresh, 2000);
-}
+let points = [];
+let selected = null; // { tag, substationId, breakerId, targetState }
 
 async function refresh() {
-  const res = await fetch(config.controllerPublicUrl + '/sessions/' + config.sessionId + '/grid');
+  const res = await fetch('/points');
   if (!res.ok) return;
-  render(await res.json());
+  const data = await res.json();
+  points = data.points;
+  render();
 }
 
-function render(grid) {
-  const el = document.getElementById('grid');
-  el.innerHTML = grid.substations.map(sub => `
-    <div class="substation">
-      <h2>${sub.name}</h2>
-      ${sub.breakers.map(b => `
-        <div class="breaker">
-          <span>${b.name} — ${b.load_mw}MW / ${b.customers} customers (${b.criticality})</span>
-          <span>
-            <span class="state-${b.state}">${b.state}</span>
-            <button onclick="toggle('${sub.id}','${b.id}','${b.state === 'OPEN' ? 'CLOSED' : 'OPEN'}')">
-              ${b.state === 'OPEN' ? 'CLOSE' : 'OPEN'}
-            </button>
-          </span>
-        </div>`).join('')}
-    </div>
+function render() {
+  const rows = document.getElementById('rows');
+  rows.innerHTML = points.map(p => `
+    <tr>
+      <td>${p.tag}</td>
+      <td class="state-${p.state}">${p.state}</td>
+      <td>
+        <button onclick="select('${p.tag}','${p.substationId}','${p.breakerId}','OPEN')" ${p.state === 'OPEN' ? 'disabled' : ''}>OPEN</button>
+        <button onclick="select('${p.tag}','${p.substationId}','${p.breakerId}','CLOSED')" ${p.state === 'CLOSED' ? 'disabled' : ''}>CLOSE</button>
+      </td>
+    </tr>
   `).join('');
 }
 
-async function toggle(substationId, breakerId, newState) {
-  await fetch(config.controllerPublicUrl + '/sessions/' + config.sessionId + '/breaker', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ substationId, breakerId, newState }),
-  });
-  refresh();
+function select(tag, substationId, breakerId, targetState) {
+  selected = { tag, substationId, breakerId, targetState };
+  document.getElementById('confirm-text').textContent =
+    `Send ${targetState} command to point ${tag}?`;
+  document.getElementById('confirm').style.display = 'block';
 }
 
-init();
+document.getElementById('confirm-no').onclick = () => {
+  selected = null;
+  document.getElementById('confirm').style.display = 'none';
+};
+
+document.getElementById('confirm-yes').onclick = async () => {
+  if (!selected) return;
+  const { tag, targetState } = selected;
+  document.getElementById('confirm').style.display = 'none';
+  const statusEl = document.getElementById('status');
+  statusEl.textContent = `Sending ${targetState} to ${tag}...`;
+  const res = await fetch('/command', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ tag, newState: targetState }),
+  });
+  statusEl.textContent = res.ok
+    ? `Command sent: ${tag} -> ${targetState}`
+    : `Command failed for ${tag}`;
+  selected = null;
+  refresh();
+};
+
+refresh();
+setInterval(refresh, 3000);
 </script>
 </body>
 </html>

@@ -43,6 +43,8 @@ function advancePhase(session: SessionState, next: MissionPhase): void {
 export const ONE_HOUR_MS = 60 * 60 * 1000;
 export const TWELVE_HOURS_MS = 12 * ONE_HOUR_MS;
 
+export type SessionOutcome = "success" | "failed" | null;
+
 export interface SessionState {
   id: string;
   missionSlug: string;
@@ -55,6 +57,9 @@ export interface SessionState {
   expiresAt: number;
   /** Whether this session actually launched a Docker lab (vs. the no-compose stub) — only lab-backed sessions count against the single-active-lab limit. */
   isLabBacked: boolean;
+  outcome: SessionOutcome;
+  /** Set alongside outcome === "failed" — what the player did wrong, shown on the failure panel. */
+  failureReason: string | null;
 }
 
 const sessions = new Map<string, SessionState>();
@@ -78,6 +83,8 @@ export function createSession(
     createdAt: now,
     expiresAt: now + TWELVE_HOURS_MS,
     isLabBacked,
+    outcome: null,
+    failureReason: null,
   };
   sessions.set(session.id, session);
   if (isLabBacked) activeSessionId = id;
@@ -136,8 +143,20 @@ export function toggleBreaker(
   const { grid, impact } = setBreakerState(session.grid, substationId, breakerId, newState);
   session.grid = grid;
 
+  const toggled = grid.substations.flatMap((s) => s.breakers).find((b) => b.id === breakerId);
   const isRequired = REQUIRED_OUTAGE_BREAKERS.includes(breakerId);
+
   if (newState === "OPEN") {
+    // Hard red line, independent of mission-specific objectives: opening a
+    // hospital-criticality breaker is an instant fail, not a point penalty.
+    // Generic across any mission using this grid model.
+    if (toggled?.criticality === "hospital" && session.outcome === null) {
+      session.outcome = "failed";
+      session.failureReason = `Opened ${toggled.tag} — a hospital feeder. Critical civilian infrastructure was compromised.`;
+      session.scoreState = applyEvent(session.scoreState, { type: "critical-facility-hit" });
+      return session;
+    }
+
     if (isRequired) {
       session.scoreState = applyEvent(session.scoreState, { type: "required-breaker-command" });
       advancePhase(session, "process-control");
@@ -176,5 +195,6 @@ export function recordEvent(session: SessionState, type: ScoreEventType): Sessio
 export function finalizeSession(session: SessionState): SessionState {
   session.scoreState = finalizeScore(session.scoreState);
   session.phase = "debrief";
+  session.outcome = "success";
   return session;
 }

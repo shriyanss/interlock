@@ -16,6 +16,8 @@ interface LiveState {
   requiredEffectAchieved: boolean;
   entrypointUrl: string;
   expiresAt: number;
+  outcome: "success" | "failed" | null;
+  failureReason: string | null;
   grid: {
     substations: { id: string; name: string; breakers: { id: string; name: string; state: string }[] }[];
   };
@@ -72,6 +74,10 @@ export function PlaySession({ missionId, missionSlug }: { missionId: string; mis
   }
   if (!state) {
     return <p className="text-neutral-500">Connecting to mission-controller…</p>;
+  }
+
+  if (state.outcome === "failed") {
+    return <FailureView missionSlug={missionSlug} reason={state.failureReason} />;
   }
 
   if (state.phase === "debrief") {
@@ -147,6 +153,19 @@ function HudRow({ label, value }: { label: string; value: string }) {
     <div className="flex justify-between border-b border-neutral-800 py-1 font-mono text-sm">
       <span className="text-neutral-500">{label}</span>
       <span className="text-neutral-200">{value}</span>
+    </div>
+  );
+}
+
+function FailureView({ missionSlug, reason }: { missionSlug: string; reason: string | null }) {
+  return (
+    <div className="rounded border border-red-800 bg-red-950/20 p-6">
+      <h2 className="font-mono text-xl text-red-400">MISSION FAILED</h2>
+      <p className="mt-4 text-neutral-300">{reason ?? "An unrecoverable action ended the mission."}</p>
+      <p className="mt-4 text-sm text-neutral-500">The lab has been shut down.</p>
+      <Link href={`/missions/${missionSlug}`} className="mt-6 inline-block text-sm text-neutral-400 underline">
+        ← Try Again
+      </Link>
     </div>
   );
 }

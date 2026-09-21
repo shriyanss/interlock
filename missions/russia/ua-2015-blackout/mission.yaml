@@ -95,15 +95,31 @@ historical_fidelity:
       December attack (sources describe "months," not a precise figure).
     - Exact duration of degraded remote-control capability after the
       gateway firmware attack.
+    - >-
+      IEC 60870-5-104 as Substation B's RTU protocol. ESET's analysis names
+      the affected serial-to-Ethernet layer as possibly running ELTIMA
+      Serial-to-Ethernet Connector or ASEM Ubiquity software, and
+      Ukrainian/European utility SCADA of this era overwhelmingly used IEC
+      60870-5-101/104 rather than Modbus or DNP3 — but no source confirms
+      the exact protocol these specific oblenergos ran, so this is a
+      plausible reconstruction, not a documented fact.
   fictional:
     - The exact employee-workstation UI, specific credential artifact, and
       internal network layout used in this lab.
     - The specific substation names, breaker IDs, and per-feeder load and
       customer counts used to compute the simulated grid state — no source
       gives per-feeder figures at this granularity.
-    - The RTU/protocol-level detail of the OT network (represented here as
-      data inside a lightweight grid model rather than real Modbus/DNP3
-      endpoints).
+    - >-
+      Modbus TCP as Substation A's RTU protocol — chosen for gameplay/tooling
+      variety (most players will have real Modbus client tools available),
+      not because it's historically indicated for this incident.
+    - >-
+      Decoy feeders, obfuscated point tags (e.g. "FDR-7734" in place of a
+      plain breaker name), the discoverable point-list artifact, the
+      engineering-workstation pivot, and the multi-step
+      select/inspect/confirm HMI command flow are all gameplay mechanics
+      added to require real reconnaissance before acting, not documented
+      details of the 2015 incident.
     - >-
       The mechanism by which the player discovers the OT operator's SSH
       credential — a deliberately narrow LDAP access-control misconfiguration
@@ -114,6 +130,10 @@ historical_fidelity:
       keylogging, and network sniffing (see enterprise_phase above), not
       an LDAP directory misconfiguration. No source describes the real
       incident's credential-harvesting method this specifically.
+    - >-
+      The instant-fail rule for opening the hospital feeder is a gameplay
+      safety rule reflecting real-world OT-attack ethics, not a documented
+      constraint or outcome from the 2015 incident itself.
 
 sources:
   - claim: Attack chain, timeline, attribution, and physical impact
@@ -147,9 +167,12 @@ phases:
 docker_services:
   - employee-workstation
   - domain-auth
-  - openvpn
+  - wireguard
   - jump-host
+  - engineering-workstation
   - hmi
+  - rtu-a
+  - rtu-b
   - defender
 
 status: available

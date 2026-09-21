@@ -1,0 +1,16 @@
+OBLENERGO DISTRIBUTION NETWORK — FEEDER POINT LIST
+INTERNAL — ENGINEERING USE ONLY. DO NOT DISTRIBUTE.
+Last reviewed: 2015-11
+
+TAG        SUBSTATION   DESCRIPTION                              CLASS
+FDR-7734   SUB-A        Ivano-Frankivsk District Residential      RESIDENTIAL
+FDR-2201   SUB-A        St. Nicholas Hospital Feeder               HOSPITAL — DO NOT DE-ENERGIZE
+FDR-5510   SUB-A        Spare / Auxiliary Feeder                   RESIDENTIAL
+FDR-8842   SUB-B        Regional Industrial Zone Feeder            INDUSTRIAL
+FDR-3319   SUB-B        Regional Residential Feeder                RESIDENTIAL
+FDR-6675   SUB-B        Spare / Auxiliary Feeder                   INDUSTRIAL
+
+Notes:
+- HOSPITAL-class feeders must never be de-energized under any
+  circumstances, including planned maintenance windows.
+- Spare/auxiliary feeders carry no load-critical customers.
