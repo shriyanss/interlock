@@ -33,15 +33,28 @@ be reached the way the historical attack pivoted.
 
 ## Discovering the jump-host credential
 
+Once the VPN tunnel is up, `domain-auth` is reachable on the `enterprise`
+subnet like any other host in it — there's no DNS for it from outside
+Docker, so find its address the same way you'd find `jump-host` on
+`ot_dmz`:
+
+```sh
+nmap -p 389 <enterprise-subnet>/24 --open
+```
+
+(The `enterprise` and `ot_dmz` CIDRs are both listed in the WireGuard
+config's own `AllowedIPs` line — `10.13.13.0/24, <enterprise-cidr>,
+<ot_dmz-cidr>` — so you don't have to guess which ranges are routed.)
+
 The phished LDAP account (revealed via the employee-workstation attachment
 page) can't read other accounts' passwords by default — except `ops.admin`'s,
 via a deliberately narrow ACL hole (see `domain-auth-seed` above). A player
 finds it by enumerating LDAP with the phished credentials, e.g.:
 
 ```sh
-ldapsearch -x -H ldap://<vpn-reachable-domain-auth-address> \
+ldapsearch -x -H ldap://<domain-auth-ip-found-above> \
   -D "uid=phished.employee,ou=people,dc=oblenergo,dc=lab" \
-  -w "Summer2015!" -b dc=oblenergo,dc=lab userPassword
+  -w "Summer2015!" -b dc=oblenergo,dc=lab "(uid=ops.admin)" userPassword
 ```
 
 This is a fictional gameplay mechanic, not a documented part of the 2015
