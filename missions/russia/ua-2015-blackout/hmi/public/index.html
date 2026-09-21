@@ -1,0 +1,74 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>SCADA HMI — Distribution Control</title>
+<style>
+  body { background:#0d1117; color:#c9d1d9; font-family: monospace; margin:0; padding:20px; }
+  h1 { font-size:16px; color:#58a6ff; border-bottom:1px solid #30363d; padding-bottom:8px; }
+  .substation { border:1px solid #30363d; margin:12px 0; padding:12px; }
+  .substation h2 { font-size:13px; color:#8b949e; margin:0 0 8px; }
+  .breaker { display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-top:1px solid #21262d; }
+  .state-CLOSED { color:#3fb950; }
+  .state-OPEN { color:#f85149; }
+  button { background:#21262d; color:#c9d1d9; border:1px solid #30363d; padding:4px 10px; cursor:pointer; font-family:monospace; }
+  button:hover { background:#30363d; }
+  #status { margin-top:16px; font-size:12px; color:#8b949e; }
+</style>
+</head>
+<body>
+  <h1>DISTRIBUTION CONTROL — ONE-LINE DIAGRAM</h1>
+  <div id="grid">Loading…</div>
+  <div id="status"></div>
+
+<script>
+let config = null;
+
+async function init() {
+  config = await (await fetch('/config')).json();
+  if (!config.sessionId) {
+    document.getElementById('status').textContent = 'No session linked to this HMI instance.';
+    return;
+  }
+  refresh();
+  setInterval(refresh, 2000);
+}
+
+async function refresh() {
+  const res = await fetch(config.controllerPublicUrl + '/sessions/' + config.sessionId + '/grid');
+  if (!res.ok) return;
+  render(await res.json());
+}
+
+function render(grid) {
+  const el = document.getElementById('grid');
+  el.innerHTML = grid.substations.map(sub => `
+    <div class="substation">
+      <h2>${sub.name}</h2>
+      ${sub.breakers.map(b => `
+        <div class="breaker">
+          <span>${b.name} — ${b.load_mw}MW / ${b.customers} customers (${b.criticality})</span>
+          <span>
+            <span class="state-${b.state}">${b.state}</span>
+            <button onclick="toggle('${sub.id}','${b.id}','${b.state === 'OPEN' ? 'CLOSED' : 'OPEN'}')">
+              ${b.state === 'OPEN' ? 'CLOSE' : 'OPEN'}
+            </button>
+          </span>
+        </div>`).join('')}
+    </div>
+  `).join('');
+}
+
+async function toggle(substationId, breakerId, newState) {
+  await fetch(config.controllerPublicUrl + '/sessions/' + config.sessionId + '/breaker', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ substationId, breakerId, newState }),
+  });
+  refresh();
+}
+
+init();
+</script>
+</body>
+</html>

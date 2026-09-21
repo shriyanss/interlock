@@ -1,0 +1,10 @@
+{
+  "name": "employee-workstation",
+  "version": "0.0.0",
+  "private": true,
+  "type": "commonjs",
+  "main": "server.js",
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}

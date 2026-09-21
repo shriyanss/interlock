@@ -1,0 +1,114 @@
+# UA-2015: BLACKOUT lab. Only employee-workstation is published to the
+# host — every other service must be reached the way the historical
+# attack pivoted: enterprise -> VPN -> jump host -> control network.
+#
+# Network segmentation here is enforced by which service is attached to
+# which network and by never publishing a `ports:` mapping on internal
+# services — NOT by Compose's `internal: true` flag. That flag would also
+# cut off containers from `host.docker.internal`, which every lab service
+# needs to report events back to mission-controller (a process running on
+# the host, not in this compose project). Documented simplification — see
+# DEVELOPMENT.md.
+networks:
+  internet:
+  enterprise:
+  ot_dmz:
+  control:
+  substations:
+
+volumes:
+  vpn-clients:
+  wireguard-config:
+
+services:
+  employee-workstation:
+    build: ./enterprise/employee-workstation
+    networks: [internet, enterprise]
+    ports:
+      - "8080:8080"
+    volumes:
+      - vpn-clients:/shared/vpn:ro
+    environment:
+      SESSION_ID: ${SESSION_ID:-}
+      CONTROLLER_URL: http://host.docker.internal:4000
+
+  domain-auth:
+    image: osixia/openldap:1.5.0
+    networks: [enterprise]
+    environment:
+      LDAP_ORGANISATION: Oblenergo Lab
+      LDAP_DOMAIN: oblenergo.lab
+      LDAP_ADMIN_PASSWORD: LabAdmin!2015
+
+  # One-shot seed: osixia's own first-run bootstrap mechanism expects to
+  # delete its internal bootstrap-ldif directory after use, which conflicts
+  # with bind-mounting a seed file directly into it. Seeding via ldapadd
+  # against the running server, after it's up, sidesteps that entirely.
+  domain-auth-seed:
+    image: osixia/openldap:1.5.0
+    networks: [enterprise]
+    depends_on: [domain-auth]
+    entrypoint:
+      - sh
+      - -c
+      - |
+        until ldapwhoami -x -H ldap://domain-auth -D "cn=admin,dc=oblenergo,dc=lab" -w "LabAdmin!2015" >/dev/null 2>&1; do sleep 1; done
+        ldapadd -x -H ldap://domain-auth -D "cn=admin,dc=oblenergo,dc=lab" -w "LabAdmin!2015" -f /seed/seed.ldif
+    volumes:
+      - ./enterprise/domain-auth/ldif-custom/seed.ldif:/seed/seed.ldif:ro
+    restart: "no"
+
+  # WireGuard instead of OpenVPN: kernel WireGuard creates its interface
+  # via netlink rather than /dev/net/tun, so it works on hosts (like this
+  # project's own dev/test host) that don't expose a TUN device to
+  # containers. Falls back to a userspace implementation — which DOES need
+  # /dev/net/tun — only if the host kernel lacks WireGuard support at all.
+  # Published on the host: this is the lab's actual "internet-facing VPN
+  # endpoint" a player connects their own WireGuard client to, mirroring
+  # the historical externally-reachable VPN access.
+  wireguard:
+    image: lscr.io/linuxserver/wireguard:latest
+    cap_add: [NET_ADMIN]
+    sysctls:
+      - net.ipv4.conf.all.src_valid_mark=1
+      - net.ipv4.ip_forward=1
+    networks: [enterprise, ot_dmz]
+    ports:
+      - "51820:51820/udp"
+    environment:
+      PUID: "1000"
+      PGID: "1000"
+      SERVERPORT: "51820"
+      PEERS: "1"
+      SERVERURL: ${WIREGUARD_SERVERURL:-auto}
+      PEERDNS: auto
+      INTERNAL_SUBNET: 10.13.13.0
+    volumes:
+      - wireguard-config:/config
+      - vpn-clients:/shared/vpn
+      - ./ot/wireguard/custom-cont-init.d:/custom-cont-init.d:ro
+
+  jump-host:
+    image: lscr.io/linuxserver/openssh-server:latest
+    networks: [ot_dmz, control]
+    environment:
+      PUID: "1000"
+      PGID: "1000"
+      USER_NAME: ops.admin
+      USER_PASSWORD: "ChangeMe!2015"
+      PASSWORD_ACCESS: "true"
+
+  hmi:
+    build: ./hmi
+    networks: [control]
+    environment:
+      SESSION_ID: ${SESSION_ID:-}
+      CONTROLLER_URL: http://host.docker.internal:4000
+      CONTROLLER_PUBLIC_URL: http://localhost:4000
+
+  defender:
+    build: ./defender
+    networks: [enterprise, ot_dmz, control]
+    environment:
+      SESSION_ID: ${SESSION_ID:-}
+      CONTROLLER_URL: http://host.docker.internal:4000

@@ -1,0 +1,35 @@
+id: RU-UA-2022-MICROSCADA
+slug: microscada-2022
+title: MicroSCADA Power Disruption
+country: Russia
+actor:
+  nation: Russia
+  group: Sandworm Team
+  attribution: medium
+target_country: Ukraine
+year: 2022
+date: "2022-10-01"
+conflict: Russo-Ukrainian War (full-scale invasion)
+sector: electric-power-distribution
+mission_type: ot-disruption
+
+attribution_confidence: medium
+historical_summary: >
+  A reported disruption of a Ukrainian energy facility's MicroSCADA
+  systems coinciding with missile strikes on power infrastructure during
+  the full-scale invasion. Full research and mission design not yet
+  complete — this entry is a locked placeholder.
+military_relationship_confidence: CONTESTED
+
+historical_fidelity:
+  documented: []
+  reconstructed: []
+  fictional: []
+
+prerequisites:
+  - RU-UA-2022-INDUSTROYER2
+unlocks: []
+
+phases: []
+docker_services: []
+status: locked

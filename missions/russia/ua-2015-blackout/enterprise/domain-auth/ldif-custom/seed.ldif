@@ -1,0 +1,33 @@
+# Lab-only directory seed for ua-2015-blackout.
+# One account (phished.employee) represents the credentials the player
+# recovers from the employee-workstation "attachment". A second account
+# (ops.admin) represents a legitimate operator with OT access, giving the
+# player something to discover during enterprise reconnaissance.
+dn: ou=people,dc=oblenergo,dc=lab
+objectClass: organizationalUnit
+ou: people
+
+dn: uid=phished.employee,ou=people,dc=oblenergo,dc=lab
+objectClass: inetOrgPerson
+cn: Phished Employee
+sn: Employee
+uid: phished.employee
+userPassword: Summer2015!
+mail: phished.employee@oblenergo.lab
+
+dn: uid=ops.admin,ou=people,dc=oblenergo,dc=lab
+objectClass: inetOrgPerson
+cn: Operations Admin
+sn: Admin
+uid: ops.admin
+userPassword: ChangeMe!2015
+mail: ops.admin@oblenergo.lab
+
+dn: ou=groups,dc=oblenergo,dc=lab
+objectClass: organizationalUnit
+ou: groups
+
+dn: cn=ot-operators,ou=groups,dc=oblenergo,dc=lab
+objectClass: groupOfNames
+cn: ot-operators
+member: uid=ops.admin,ou=people,dc=oblenergo,dc=lab

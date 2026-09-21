@@ -1,0 +1,10 @@
+{
+  "name": "defender",
+  "version": "0.0.0",
+  "private": true,
+  "type": "commonjs",
+  "main": "watcher.js",
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}

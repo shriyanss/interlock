@@ -1,0 +1,145 @@
+id: RU-UA-2015
+slug: ua-2015-blackout
+title: "UA-2015: BLACKOUT"
+country: Russia
+actor:
+  nation: Russia
+  group: Sandworm Team
+  attribution: high
+target_country: Ukraine
+year: 2015
+date: "2015-12-23"
+conflict: Russo-Ukrainian War (post-Crimea annexation, Donbas conflict)
+sector: electric-power-distribution
+mission_type: ot-disruption
+
+attribution_confidence: high
+historical_summary: >
+  On December 23, 2015, attackers gained remote access to the SCADA
+  environments of three Ukrainian regional electricity distribution
+  companies (oblenergos) — Prykarpattyaoblenergo, Chernivtsioblenergo, and
+  Kyivoblenergo — using credentials and VPN access stolen months earlier via
+  a BlackEnergy3 spear-phishing campaign. Operating hijacked operator HMI
+  sessions, they opened breakers at distribution substations, cutting power
+  to approximately 225,000-230,000 customers. They then corrupted the
+  firmware of serial-to-Ethernet gateways and deployed KillDisk malware to
+  prevent remote restoration, forcing utility staff to manually close
+  breakers on-site. This is the first confirmed cyberattack to cause a
+  power outage.
+
+military_context: >
+  The attack occurred amid the ongoing Russia-Ukraine conflict following
+  Russia's 2014 annexation of Crimea and the outbreak of fighting in the
+  Donbas region. No source establishes that this specific cyberattack was
+  coordinated with or enabled a specific concurrent military/kinetic
+  operation.
+military_relationship_confidence: ASSOCIATED
+
+initial_access: >
+  Spear-phishing emails with malicious macro-enabled Office attachments,
+  some spoofing the Ukrainian parliament, delivered the BlackEnergy3
+  implant to oblenergo IT/OT staff months before the December attack.
+enterprise_phase: >
+  BlackEnergy3 established a backdoor used for network reconnaissance,
+  credential harvesting (keylogging/sniffing), lateral movement, and
+  creation of privileged domain accounts within the corporate IT network.
+ot_phase: >
+  Stolen VPN and domain credentials were used to reach ICS client software
+  and remote-administration tools bridging IT to the SCADA environment.
+  Attackers then operated hijacked HMI/SCADA sessions directly, as if they
+  were legitimate dispatchers, to issue breaker-open commands.
+physical_effect: >
+  Circuit breakers at distribution substations opened, cutting power to
+  designated residential and industrial feeders across three oblenergos.
+historical_effect: >
+  Approximately 225,000-230,000 customers lost power for 1-6 hours before
+  manual restoration. Serial-to-Ethernet gateway firmware corruption and
+  KillDisk deployment against operator workstations degraded remote SCADA
+  control for an extended period afterward.
+
+player_objectives:
+  primary:
+    - Cause the designated distribution feeders to lose power via simulated
+      control-system interaction (open the required breakers).
+  secondary:
+    - Identify the OT network topology before taking action.
+    - Access the control center using valid, discovered credentials rather
+      than brute force.
+    - Cause the intended outage without opening the hospital feeder.
+    - Disrupt remote-restoration capability before disconnecting.
+    - Stay under the defender's detection threshold.
+
+defender_behavior:
+  - Suspicious login detected on the employee-workstation portal.
+  - VPN connection logged from an unexpected internal host.
+  - HMI session created alert raised in the control-center log.
+  - Breaker command issued alert raised for any unauthorized breaker change.
+  - Operator attempts remote restoration once an outage is detected.
+
+historical_fidelity:
+  documented:
+    - Attackers used spear-phishing with malicious Office macros to deliver
+      an initial backdoor.
+    - Attackers stole legitimate VPN and domain credentials rather than
+      relying solely on malware.
+    - Attackers reached the SCADA environment via VPN/remote-access tooling
+      bridging IT and OT.
+    - Attackers operated hijacked HMI sessions to remotely open breakers.
+    - Attackers corrupted serial-to-Ethernet gateway firmware specifically
+      to block remote restoration.
+    - Attackers deployed KillDisk against operator workstations.
+    - Approximately 225,000-230,000 customers lost power for 1-6 hours,
+      restored manually.
+  reconstructed:
+    - Exact reconnaissance/dwell time between initial compromise and the
+      December attack (sources describe "months," not a precise figure).
+    - Exact duration of degraded remote-control capability after the
+      gateway firmware attack.
+  fictional:
+    - The exact employee-workstation UI, specific credential artifact, and
+      internal network layout used in this lab.
+    - The specific substation names, breaker IDs, and per-feeder load and
+      customer counts used to compute the simulated grid state — no source
+      gives per-feeder figures at this granularity.
+    - The RTU/protocol-level detail of the OT network (represented here as
+      data inside a lightweight grid model rather than real Modbus/DNP3
+      endpoints).
+
+sources:
+  - claim: Attack chain, timeline, attribution, and physical impact
+    url: https://www.cisa.gov/news-events/ics-alerts/ir-alert-h-16-056-01
+  - claim: Campaign details, technique mapping, actor attribution
+    url: https://attack.mitre.org/campaigns/C0028/
+  - claim: Actor group profile and aliases (Sandworm Team)
+    url: https://attack.mitre.org/groups/G0034/
+  - claim: Detailed kill-chain analysis and defense lessons learned
+    url: https://ics.sans.org/media/E-ISAC_SANS_Ukraine_DUC_5.pdf
+  - claim: KillDisk and serial-to-Ethernet gateway firmware technical detail
+    url: https://www.welivesecurity.com/2016/01/04/blackenergy-trojan-strikes-again-attacks-ukrainian-electric-power-industry/
+  - claim: Broader 2022-era geopolitical context (not conflated with 2015 specifics)
+    url: https://www.congress.gov/crs-product/R48067
+
+prerequisites: []
+unlocks:
+  - RU-UA-2016-INDUSTROYER
+
+phases:
+  - briefing
+  - initial-compromise
+  - enterprise-discovery
+  - it-ot-pivot
+  - ot-recon
+  - process-control
+  - physical-effect
+  - historical-impact
+  - debrief
+
+docker_services:
+  - employee-workstation
+  - domain-auth
+  - openvpn
+  - jump-host
+  - hmi
+  - defender
+
+status: available

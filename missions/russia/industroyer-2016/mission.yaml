@@ -1,0 +1,37 @@
+id: RU-UA-2016-INDUSTROYER
+slug: industroyer-2016
+title: Industroyer / CrashOverride
+country: Russia
+actor:
+  nation: Russia
+  group: Sandworm Team (Electrum)
+  attribution: high
+target_country: Ukraine
+year: 2016
+date: "2016-12-17"
+conflict: Russo-Ukrainian War
+sector: electric-power-transmission
+mission_type: ot-disruption
+
+attribution_confidence: high
+historical_summary: >
+  A follow-up attack on a Ukrainian transmission substation using
+  purpose-built malware (Industroyer/CrashOverride) that spoke ICS
+  protocols (IEC 101/104, IEC 61850) natively to issue breaker commands
+  without human operators at the keyboard. Full research and mission design
+  not yet complete — this entry is a locked placeholder.
+military_relationship_confidence: UNKNOWN
+
+historical_fidelity:
+  documented: []
+  reconstructed: []
+  fictional: []
+
+prerequisites:
+  - RU-UA-2015
+unlocks:
+  - RU-UA-2022-INDUSTROYER2
+
+phases: []
+docker_services: []
+status: locked

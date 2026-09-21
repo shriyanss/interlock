@@ -1,0 +1,36 @@
+id: RU-UA-2022-INDUSTROYER2
+slug: industroyer2-2022
+title: Industroyer2
+country: Russia
+actor:
+  nation: Russia
+  group: Sandworm Team
+  attribution: high
+target_country: Ukraine
+year: 2022
+date: "2022-04-08"
+conflict: Russo-Ukrainian War (full-scale invasion)
+sector: electric-power-transmission
+mission_type: ot-disruption
+
+attribution_confidence: high
+historical_summary: >
+  An Industroyer-family variant targeting Ukrainian high-voltage
+  substations during the full-scale invasion, detected and disrupted
+  before causing an outage. Full research and mission design not yet
+  complete — this entry is a locked placeholder.
+military_relationship_confidence: ASSOCIATED
+
+historical_fidelity:
+  documented: []
+  reconstructed: []
+  fictional: []
+
+prerequisites:
+  - RU-UA-2016-INDUSTROYER
+unlocks:
+  - RU-UA-2022-MICROSCADA
+
+phases: []
+docker_services: []
+status: locked

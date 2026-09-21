@@ -1,0 +1,14 @@
+{
+  "name": "interlock",
+  "private": true,
+  "version": "0.0.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev:portal": "pnpm --filter portal dev",
+    "dev:controller": "pnpm --filter mission-controller dev",
+    "build": "pnpm -r build",
+    "test": "pnpm -r test"
+  }
+}
