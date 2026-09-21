@@ -40,6 +40,7 @@ Recorded per-mission in each `mission.yaml`'s `historical_fidelity` block. For u
 - No RTU-level protocol fidelity (Modbus/DNP3) — breakers are pure data in `game-engine`, not real ICS-protocol endpoints.
 - Session state is single-instance/in-memory (see above).
 - No `packages/ui` — the portal is the only consumer of its own components right now (`apps/portal/components/`), and pulling them into a shared package would be an unrequested abstraction until a second app needs them.
+- **`enterprise-discovery-complete` (the LDAP recon milestone) is not auto-detected.** The player now has a real in-game reason to enumerate LDAP (discovering `ops.admin`'s SSH password via the ACL hole added in `domain-auth-seed`), but nothing watches slapd's own access log to fire the score event automatically the way `vpn-connected`/`ot-access-achieved`/`ot-topology-discovered` are — would need a log-tailing sidecar parsing slapd's stats log for the specific search, which risks not working reliably without live log-format verification. Left unwired for now.
 
 ## Remote/demo deployment
 

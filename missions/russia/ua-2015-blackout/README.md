@@ -22,7 +22,7 @@ Start Mission in the portal — see the root README.
 |---|---|---|
 | `employee-workstation` | Fake internal portal; lab-only phishing/credential-reveal step | `internet`, `enterprise` (published on host `:8080`) |
 | `domain-auth` | OpenLDAP directory (phished + operator accounts) | `enterprise` |
-| `domain-auth-seed` | One-shot `ldapadd` seeding sidecar, exits after seeding | `enterprise` |
+| `domain-auth-seed` | One-shot `ldapadd` seeding sidecar; also punches a narrow ACL hole so a phished-employee bind can read `ops.admin`'s password (see below) | `enterprise` |
 | `wireguard` | VPN boundary bridging enterprise → OT (published on host `:51820/udp` — this is the lab's internet-facing VPN endpoint) | `enterprise`, `ot_dmz` |
 | `jump-host` | SSH bastion into the control network | `ot_dmz`, `control` |
 | `hmi` | Synthetic SCADA HMI, one-line diagram | `control` |
@@ -30,6 +30,22 @@ Start Mission in the portal — see the root README.
 
 Only `employee-workstation` is published to the host — everything else must
 be reached the way the historical attack pivoted.
+
+## Discovering the jump-host credential
+
+The phished LDAP account (revealed via the employee-workstation attachment
+page) can't read other accounts' passwords by default — except `ops.admin`'s,
+via a deliberately narrow ACL hole (see `domain-auth-seed` above). A player
+finds it by enumerating LDAP with the phished credentials, e.g.:
+
+```sh
+ldapsearch -x -H ldap://<vpn-reachable-domain-auth-address> \
+  -D "uid=phished.employee,ou=people,dc=oblenergo,dc=lab" \
+  -w "Summer2015!" -b dc=oblenergo,dc=lab userPassword
+```
+
+This is a fictional gameplay mechanic, not a documented part of the 2015
+incident — see `mission.yaml`'s `historical_fidelity.fictional`.
 
 ## Known gaps
 

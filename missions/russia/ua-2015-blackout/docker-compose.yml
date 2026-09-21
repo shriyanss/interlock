@@ -55,6 +55,14 @@ services:
   # delete its internal bootstrap-ldif directory after use, which conflicts
   # with bind-mounting a seed file directly into it. Seeding via ldapadd
   # against the running server, after it's up, sidesteps that entirely.
+  #
+  # Also punches a narrow hole in the default userPassword ACL so a bind
+  # authenticated as the phished employee account can read ops.admin's
+  # password specifically — this is how a player is meant to discover the
+  # jump-host SSH credential in-game, via LDAP enumeration, rather than
+  # being told it. This is a FICTIONAL gameplay mechanic, not a documented
+  # part of the 2015 incident (which harvested credentials via phishing,
+  # keylogging, and network sniffing — see mission.yaml historical_fidelity).
   domain-auth-seed:
     image: osixia/openldap:1.5.0
     networks: [enterprise]
@@ -65,6 +73,13 @@ services:
       - |
         until ldapwhoami -x -H ldap://domain-auth -D "cn=admin,dc=oblenergo,dc=lab" -w "LabAdmin!2015" >/dev/null 2>&1; do sleep 1; done
         ldapadd -x -H ldap://domain-auth -D "cn=admin,dc=oblenergo,dc=lab" -w "LabAdmin!2015" -f /seed/seed.ldif
+
+        CONFIG_DN=$(ldapsearch -x -H ldap://domain-auth -D "cn=admin,cn=config" -w "LabAdmin!2015" -b cn=config "(olcSuffix=dc=oblenergo,dc=lab)" dn -LLL 2>/dev/null | awk '/^dn:/{print $2; exit}')
+        if [ -n "$$CONFIG_DN" ]; then
+          printf 'dn: %s\nchangetype: modify\nreplace: olcAccess\nolcAccess: {0}to filter=(uid=ops.admin) attrs=userPassword by users read by * none\nolcAccess: {1}to attrs=userPassword by self write by anonymous auth by * none\nolcAccess: {2}to * by * read\n' "$$CONFIG_DN" | ldapmodify -x -H ldap://domain-auth -D "cn=admin,cn=config" -w "LabAdmin!2015"
+        else
+          echo "[domain-auth-seed] could not resolve config DN — ACL not applied, ops.admin's password will not be discoverable via LDAP"
+        fi
     volumes:
       - ./enterprise/domain-auth/ldif-custom/seed.ldif:/seed/seed.ldif:ro
     restart: "no"

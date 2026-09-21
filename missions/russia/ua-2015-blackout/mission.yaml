@@ -104,6 +104,16 @@ historical_fidelity:
     - The RTU/protocol-level detail of the OT network (represented here as
       data inside a lightweight grid model rather than real Modbus/DNP3
       endpoints).
+    - >-
+      The mechanism by which the player discovers the OT operator's SSH
+      credential — a deliberately narrow LDAP access-control misconfiguration
+      lets an authenticated bind (the phished employee account) read that
+      one account's password. This is a gameplay mechanic representing
+      "enterprise discovery," not a documented technique from the 2015
+      incident — the actual attackers harvested credentials via phishing,
+      keylogging, and network sniffing (see enterprise_phase above), not
+      an LDAP directory misconfiguration. No source describes the real
+      incident's credential-harvesting method this specifically.
 
 sources:
   - claim: Attack chain, timeline, attribution, and physical impact
