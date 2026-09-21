@@ -1,9 +1,10 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getMissionBySlug } from "@/lib/missions";
+import { flagFor } from "@/lib/flags";
 import { ActorAttributionBadge, AttributionBadge } from "@/components/Badges";
 import { FidelityList } from "@/components/FidelityList";
-import { StartMissionButton } from "@/components/StartMissionButton";
+import { MissionLaunchControl } from "@/components/MissionLaunchControl";
 
 export default async function MissionPage({ params }: PageProps<"/missions/[slug]">) {
   const { slug } = await params;
@@ -19,8 +20,8 @@ export default async function MissionPage({ params }: PageProps<"/missions/[slug
       <h1 className="mt-3 font-mono text-3xl text-neutral-100">{mission.title}</h1>
       <dl className="mt-4 grid grid-cols-2 gap-x-6 gap-y-1 text-sm sm:grid-cols-3">
         <Field label="Date" value={mission.date} />
-        <Field label="Actor" value={mission.actor.group ?? mission.actor.nation} />
-        <Field label="Target" value={mission.target_country} />
+        <Field label="Actor" value={`${flagFor(mission.actor.nation)} ${mission.actor.group ?? mission.actor.nation}`} />
+        <Field label="Target" value={`${flagFor(mission.target_country)} ${mission.target_country}`} />
         <Field label="Sector" value={mission.sector} />
         <Field label="Conflict" value={mission.conflict ?? "—"} />
         <Field label="Type" value={mission.mission_type} />
@@ -79,7 +80,7 @@ export default async function MissionPage({ params }: PageProps<"/missions/[slug
 
       <div className="mt-12">
         {mission.status === "available" ? (
-          <StartMissionButton slug={mission.slug} />
+          <MissionLaunchControl slug={mission.slug} />
         ) : (
           <p className="font-mono text-sm text-neutral-500">This mission is not yet playable.</p>
         )}

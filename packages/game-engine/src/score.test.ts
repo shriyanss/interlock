@@ -9,12 +9,19 @@ assert.equal(state.score, 100);
 state = applyEvent(state, { type: "initial-access-achieved" });
 assert.equal(state.score, 100);
 
+state = applyEvent(state, { type: "vpn-connected" });
+assert.equal(state.score, 175);
+
+// repeating vpn-connected doesn't double-award either
+state = applyEvent(state, { type: "vpn-connected" });
+assert.equal(state.score, 175);
+
 state = applyEvent(state, { type: "ot-access-achieved" });
-assert.equal(state.score, 250);
+assert.equal(state.score, 325);
 
 // hitting a critical facility penalizes and flags it
 state = applyEvent(state, { type: "critical-facility-hit" });
-assert.equal(state.score, 50);
+assert.equal(state.score, 125);
 assert.equal(state.criticalFacilityHit, true);
 
 // detection events raise detection level; low detection earns the stealth bonus

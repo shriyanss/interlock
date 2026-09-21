@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { flagFor } from "@/lib/flags";
 
 const NATIONS = [
   { slug: "russia", name: "Russia", status: "available" as const },
@@ -25,7 +26,7 @@ export default function NationsPage() {
               href={`/nations/${nation.slug}`}
               className="rounded-lg border border-neutral-700 bg-neutral-900 p-6 transition hover:border-neutral-500"
             >
-              <div className="font-mono text-lg text-neutral-100">{nation.name}</div>
+              <div className="font-mono text-lg text-neutral-100">{flagFor(nation.name)} {nation.name}</div>
               <div className="mt-1 text-xs font-mono uppercase text-emerald-400">Available</div>
             </Link>
           ) : (
@@ -33,7 +34,7 @@ export default function NationsPage() {
               key={nation.slug}
               className="cursor-not-allowed rounded-lg border border-neutral-800 bg-neutral-950 p-6 opacity-50"
             >
-              <div className="font-mono text-lg text-neutral-300">{nation.name}</div>
+              <div className="font-mono text-lg text-neutral-300">{flagFor(nation.name)} {nation.name}</div>
               <div className="mt-1 text-xs font-mono uppercase text-neutral-500">Coming Soon</div>
             </div>
           ),

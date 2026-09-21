@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getAllMissions } from "@/lib/missions";
+import { flagFor } from "@/lib/flags";
 import { ActorAttributionBadge } from "@/components/Badges";
 
 export default function ArchivePage() {
@@ -18,7 +19,7 @@ export default function ArchivePage() {
             <div>
               <div className="text-neutral-100">{mission.title}</div>
               <div className="text-xs text-neutral-500">
-                {mission.year} · {mission.country} · {mission.target_country}
+                {mission.year} · {flagFor(mission.country)} {mission.country} → {flagFor(mission.target_country)} {mission.target_country}
               </div>
             </div>
             <ActorAttributionBadge level={mission.attribution_confidence} />

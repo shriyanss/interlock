@@ -1,5 +1,6 @@
 export type ScoreEventType =
   | "initial-access-achieved"
+  | "vpn-connected"
   | "enterprise-discovery-complete"
   | "ot-access-achieved"
   | "ot-topology-discovered"
@@ -28,6 +29,7 @@ export function initialScoreState(): ScoreState {
 /** One-time point awards — repeating the same milestone event scores nothing further. */
 const ONE_TIME_AWARDS: Partial<Record<ScoreEventType, number>> = {
   "initial-access-achieved": 100,
+  "vpn-connected": 75,
   "enterprise-discovery-complete": 100,
   "ot-access-achieved": 150,
   "ot-topology-discovered": 150,

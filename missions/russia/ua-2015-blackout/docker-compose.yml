@@ -87,6 +87,8 @@ services:
       # "off", which is itself invalid and would still break wg-quick.
       PEERDNS: "off"
       INTERNAL_SUBNET: 10.13.13.0
+      SESSION_ID: ${SESSION_ID:-}
+      CONTROLLER_URL: http://host.docker.internal:4000
     volumes:
       - wireguard-config:/config
       - vpn-clients:/shared/vpn
@@ -101,6 +103,10 @@ services:
       USER_NAME: ops.admin
       USER_PASSWORD: "ChangeMe!2015"
       PASSWORD_ACCESS: "true"
+      SESSION_ID: ${SESSION_ID:-}
+      CONTROLLER_URL: http://host.docker.internal:4000
+    volumes:
+      - ./ot/jump-host/custom-cont-init.d:/custom-cont-init.d:ro
 
   hmi:
     build: ./hmi
@@ -108,7 +114,7 @@ services:
     environment:
       SESSION_ID: ${SESSION_ID:-}
       CONTROLLER_URL: http://host.docker.internal:4000
-      CONTROLLER_PUBLIC_URL: http://localhost:4000
+      CONTROLLER_PUBLIC_URL: http://${ENTRYPOINT_HOST:-localhost}:4000
 
   defender:
     build: ./defender

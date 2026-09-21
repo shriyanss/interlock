@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { ProgressStore } from "@/lib/progress";
+import { CONTROLLER_URL, stopSession } from "@/lib/activeSession";
 
-const CONTROLLER_URL = process.env.NEXT_PUBLIC_MISSION_CONTROLLER_URL ?? "http://localhost:4000";
 const CONTROLLER_WS_URL = CONTROLLER_URL.replace(/^http/, "ws");
+const ONE_HOUR_MS = 60 * 60 * 1000;
 
 interface LiveState {
   phase: string;
@@ -14,16 +15,24 @@ interface LiveState {
   detectionLevel: number;
   requiredEffectAchieved: boolean;
   entrypointUrl: string;
+  expiresAt: number;
   grid: {
     substations: { id: string; name: string; breakers: { id: string; name: string; state: string }[] }[];
   };
 }
 
 export function PlaySession({ missionId, missionSlug }: { missionId: string; missionSlug: string }) {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const sessionId = searchParams.get("session");
   const [state, setState] = useState<LiveState | null>(null);
+  const [now, setNow] = useState(() => Date.now());
   const markedComplete = useRef(false);
+
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     if (!sessionId) return;
@@ -44,6 +53,20 @@ export function PlaySession({ missionId, missionSlug }: { missionId: string; mis
     }
   }, [state?.phase, state?.score, missionId]);
 
+  async function extend() {
+    if (!sessionId) return;
+    const res = await fetch(`${CONTROLLER_URL}/sessions/${sessionId}/extend`, { method: "POST" });
+    if (res.ok) {
+      const { expiresAt } = (await res.json()) as { expiresAt: number };
+      setState((s) => (s ? { ...s, expiresAt } : s));
+    }
+  }
+
+  async function stop() {
+    if (!sessionId) return;
+    if (await stopSession(sessionId)) router.push(`/missions/${missionSlug}`);
+  }
+
   if (!sessionId) {
     return <p className="text-red-400">Missing session — start the mission from its briefing page.</p>;
   }
@@ -54,6 +77,10 @@ export function PlaySession({ missionId, missionSlug }: { missionId: string; mis
   if (state.phase === "debrief") {
     return <DebriefView missionSlug={missionSlug} score={state.score} detectionLevel={state.detectionLevel} />;
   }
+
+  const remainingMs = state.expiresAt - now;
+  const remainingLabel = formatRemaining(remainingMs);
+  const canExtend = remainingMs < ONE_HOUR_MS;
 
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px]">
@@ -71,6 +98,23 @@ export function PlaySession({ missionId, missionSlug }: { missionId: string; mis
         <HudRow label="Phase" value={state.phase} />
         <HudRow label="Score" value={String(state.score)} />
         <HudRow label="Detection" value={`${state.detectionLevel}`} />
+        <HudRow label="Time left" value={remainingLabel} />
+        <div className="mt-4 flex gap-2">
+          {canExtend && (
+            <button
+              onClick={extend}
+              className="rounded border border-amber-700 bg-amber-950/40 px-3 py-1 font-mono text-xs uppercase text-amber-300 hover:border-amber-500"
+            >
+              Extend +12h
+            </button>
+          )}
+          <button
+            onClick={stop}
+            className="rounded border border-red-800 bg-red-950/40 px-3 py-1 font-mono text-xs uppercase text-red-400 hover:border-red-500"
+          >
+            Stop Lab
+          </button>
+        </div>
         <div className="mt-4">
           <p className="font-mono text-xs uppercase text-neutral-500">Grid</p>
           {state.grid.substations.map((sub) => (
@@ -88,6 +132,14 @@ export function PlaySession({ missionId, missionSlug }: { missionId: string; mis
       </div>
     </div>
   );
+}
+
+function formatRemaining(ms: number): string {
+  if (ms <= 0) return "expired";
+  const totalMinutes = Math.floor(ms / 60_000);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return `${hours}h ${minutes}m`;
 }
 
 function HudRow({ label, value }: { label: string; value: string }) {

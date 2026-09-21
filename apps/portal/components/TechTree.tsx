@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { Mission } from "mission-schema";
 import { ProgressStore } from "@/lib/progress";
+import { flagFor } from "@/lib/flags";
 import { ActorAttributionBadge } from "./Badges";
 
 export function TechTree({ missions }: { missions: Mission[] }) {
@@ -61,7 +62,7 @@ function MissionTileContent({ mission, done, locked }: { mission: Mission; done:
       <div>
         <div className="font-semibold text-neutral-100">{mission.title}</div>
         <div className="mt-1 text-sm text-neutral-400">
-          {mission.actor.group ?? mission.actor.nation} → {mission.target_country} · {mission.sector}
+          {flagFor(mission.actor.nation)} {mission.actor.group ?? mission.actor.nation} → {flagFor(mission.target_country)} {mission.target_country} · {mission.sector}
         </div>
       </div>
       <div className="flex items-center gap-2">

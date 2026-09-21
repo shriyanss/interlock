@@ -12,14 +12,19 @@ export async function launchLab(
   composePath: string,
   sessionId: string,
   entrypointHost: string,
-): Promise<{ entrypointUrl: string }> {
+): Promise<{ entrypointUrl: string; isLabBacked: boolean }> {
   if (!existsSync(composePath)) {
-    return { entrypointUrl: `http://${entrypointHost}:8080/stub-entrypoint` };
+    return { entrypointUrl: `http://${entrypointHost}:8080/stub-entrypoint`, isLabBacked: false };
   }
   await execa("docker-compose", ["-f", composePath, "up", "-d", "--build"], {
-    env: { ...process.env, SESSION_ID: sessionId, WIREGUARD_SERVERURL: entrypointHost },
+    env: {
+      ...process.env,
+      SESSION_ID: sessionId,
+      WIREGUARD_SERVERURL: entrypointHost,
+      ENTRYPOINT_HOST: entrypointHost,
+    },
   });
-  return { entrypointUrl: `http://${entrypointHost}:8080` };
+  return { entrypointUrl: `http://${entrypointHost}:8080`, isLabBacked: true };
 }
 
 export async function teardownLab(composePath: string): Promise<void> {

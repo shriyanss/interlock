@@ -21,6 +21,9 @@ export type MissionPhase =
   | "historical-impact"
   | "debrief";
 
+export const ONE_HOUR_MS = 60 * 60 * 1000;
+export const TWELVE_HOURS_MS = 12 * ONE_HOUR_MS;
+
 export interface SessionState {
   id: string;
   missionSlug: string;
@@ -30,11 +33,21 @@ export interface SessionState {
   requiredEffectAchieved: boolean;
   entrypointUrl: string;
   createdAt: number;
+  expiresAt: number;
+  /** Whether this session actually launched a Docker lab (vs. the no-compose stub) — only lab-backed sessions count against the single-active-lab limit. */
+  isLabBacked: boolean;
 }
 
 const sessions = new Map<string, SessionState>();
+let activeSessionId: string | null = null;
 
-export function createSession(missionSlug: string, entrypointUrl: string, id = randomUUID()): SessionState {
+export function createSession(
+  missionSlug: string,
+  entrypointUrl: string,
+  id = randomUUID(),
+  isLabBacked = true,
+): SessionState {
+  const now = Date.now();
   const session: SessionState = {
     id,
     missionSlug,
@@ -43,9 +56,12 @@ export function createSession(missionSlug: string, entrypointUrl: string, id = r
     scoreState: initialScoreState(),
     requiredEffectAchieved: false,
     entrypointUrl,
-    createdAt: Date.now(),
+    createdAt: now,
+    expiresAt: now + TWELVE_HOURS_MS,
+    isLabBacked,
   };
   sessions.set(session.id, session);
+  if (isLabBacked) activeSessionId = id;
   return session;
 }
 
@@ -54,7 +70,30 @@ export function getSession(id: string): SessionState | undefined {
 }
 
 export function deleteSession(id: string): boolean {
+  if (activeSessionId === id) activeSessionId = null;
   return sessions.delete(id);
+}
+
+/** The one lab-backed session currently running, if any — enforces "one lab at a time". */
+export function getActiveSession(): SessionState | undefined {
+  if (!activeSessionId) return undefined;
+  const session = sessions.get(activeSessionId);
+  if (!session) {
+    activeSessionId = null;
+    return undefined;
+  }
+  return session;
+}
+
+export function allSessions(): SessionState[] {
+  return [...sessions.values()];
+}
+
+/** Extends expiresAt by another 12h, but only once inside the last hour before it lapses — prevents indefinite renewal. */
+export function extendSession(session: SessionState): boolean {
+  if (session.expiresAt - Date.now() >= ONE_HOUR_MS) return false;
+  session.expiresAt = Date.now() + TWELVE_HOURS_MS;
+  return true;
 }
 
 /** Recomputes requiredEffectAchieved after a breaker change: every required breaker must be OPEN, and the hospital feeder must stay CLOSED. */
@@ -82,6 +121,9 @@ export function toggleBreaker(
   if (newState === "OPEN") {
     if (isRequired) {
       session.scoreState = applyEvent(session.scoreState, { type: "required-breaker-command" });
+      if (session.phase === "ot-recon" || session.phase === "it-ot-pivot") {
+        session.phase = "process-control";
+      }
     } else {
       session.scoreState = applyEvent(session.scoreState, { type: "unintended-load-affected" });
     }
@@ -100,8 +142,17 @@ export function toggleBreaker(
   return session;
 }
 
+/** Milestone events also advance the guided-mode phase — generic across missions as long as their lab reports this same event vocabulary. */
+const PHASE_ON_EVENT: Partial<Record<ScoreEventType, MissionPhase>> = {
+  "initial-access-achieved": "initial-compromise",
+  "vpn-connected": "it-ot-pivot",
+  "ot-access-achieved": "ot-recon",
+};
+
 export function recordEvent(session: SessionState, type: ScoreEventType): SessionState {
   session.scoreState = applyEvent(session.scoreState, { type });
+  const nextPhase = PHASE_ON_EVENT[type];
+  if (nextPhase) session.phase = nextPhase;
   return session;
 }
 

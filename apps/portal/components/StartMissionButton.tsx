@@ -2,8 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-
-const CONTROLLER_URL = process.env.NEXT_PUBLIC_MISSION_CONTROLLER_URL ?? "http://localhost:4000";
+import { CONTROLLER_URL } from "@/lib/activeSession";
 
 export function StartMissionButton({ slug }: { slug: string }) {
   const router = useRouter();
@@ -19,11 +18,15 @@ export function StartMissionButton({ slug }: { slug: string }) {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ missionSlug: slug }),
       });
+      if (res.status === 409) {
+        const { active } = (await res.json()) as { active: { missionSlug: string } };
+        throw new Error(`Another lab is already running (${active.missionSlug}) — stop it first.`);
+      }
       if (!res.ok) throw new Error(`mission-controller returned ${res.status}`);
       const { sessionId } = (await res.json()) as { sessionId: string };
       router.push(`/missions/${slug}/play?session=${sessionId}`);
-    } catch {
-      setError("Could not reach mission-controller. Is it running on " + CONTROLLER_URL + "?");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : `Could not reach mission-controller at ${CONTROLLER_URL}.`);
       setPending(false);
     }
   }
