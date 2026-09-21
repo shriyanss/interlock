@@ -50,6 +50,11 @@ services:
       LDAP_ORGANISATION: Oblenergo Lab
       LDAP_DOMAIN: oblenergo.lab
       LDAP_ADMIN_PASSWORD: LabAdmin!2015
+      # osixia defaults the cn=config admin password to the literal string
+      # "config" rather than LDAP_ADMIN_PASSWORD (verified: LDAP_ADMIN_PASSWORD
+      # alone gives "Invalid credentials" against cn=admin,cn=config) — set
+      # explicitly so there's one secret to track, not a magic default to know.
+      LDAP_CONFIG_PASSWORD: LabAdmin!2015
 
   # One-shot seed: osixia's own first-run bootstrap mechanism expects to
   # delete its internal bootstrap-ldif directory after use, which conflicts
@@ -74,7 +79,16 @@ services:
         until ldapwhoami -x -H ldap://domain-auth -D "cn=admin,dc=oblenergo,dc=lab" -w "LabAdmin!2015" >/dev/null 2>&1; do sleep 1; done
         ldapadd -x -H ldap://domain-auth -D "cn=admin,dc=oblenergo,dc=lab" -w "LabAdmin!2015" -f /seed/seed.ldif
 
-        CONFIG_DN=$(ldapsearch -x -H ldap://domain-auth -D "cn=admin,cn=config" -w "LabAdmin!2015" -b cn=config "(olcSuffix=dc=oblenergo,dc=lab)" dn -LLL 2>/dev/null | awk '/^dn:/{print $2; exit}')
+        # cn=config's own admin password isn't necessarily ready the exact
+        # moment the main database's bind succeeds (osixia applies them as
+        # separate bootstrap steps) — retry rather than give up on the
+        # first failed lookup.
+        CONFIG_DN=""
+        for i in $(seq 1 20); do
+          CONFIG_DN=$(ldapsearch -x -H ldap://domain-auth -D "cn=admin,cn=config" -w "LabAdmin!2015" -b cn=config "(olcSuffix=dc=oblenergo,dc=lab)" dn -LLL 2>/dev/null | awk '/^dn:/{print $2; exit}')
+          [ -n "$$CONFIG_DN" ] && break
+          sleep 1
+        done
         if [ -n "$$CONFIG_DN" ]; then
           printf 'dn: %s\nchangetype: modify\nreplace: olcAccess\nolcAccess: {0}to filter=(uid=ops.admin) attrs=userPassword by users read by * none\nolcAccess: {1}to attrs=userPassword by self write by anonymous auth by * none\nolcAccess: {2}to * by * read\n' "$$CONFIG_DN" | ldapmodify -x -H ldap://domain-auth -D "cn=admin,cn=config" -w "LabAdmin!2015"
         else
