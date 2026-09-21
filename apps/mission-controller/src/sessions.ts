@@ -21,6 +21,25 @@ export type MissionPhase =
   | "historical-impact"
   | "debrief";
 
+const PHASE_ORDER: MissionPhase[] = [
+  "briefing",
+  "initial-compromise",
+  "enterprise-discovery",
+  "it-ot-pivot",
+  "ot-recon",
+  "process-control",
+  "physical-effect",
+  "historical-impact",
+  "debrief",
+];
+
+/** Guards against events arriving out of the expected order (retries, races) walking the phase backward. */
+function advancePhase(session: SessionState, next: MissionPhase): void {
+  if (PHASE_ORDER.indexOf(next) > PHASE_ORDER.indexOf(session.phase)) {
+    session.phase = next;
+  }
+}
+
 export const ONE_HOUR_MS = 60 * 60 * 1000;
 export const TWELVE_HOURS_MS = 12 * ONE_HOUR_MS;
 
@@ -121,9 +140,7 @@ export function toggleBreaker(
   if (newState === "OPEN") {
     if (isRequired) {
       session.scoreState = applyEvent(session.scoreState, { type: "required-breaker-command" });
-      if (session.phase === "ot-recon" || session.phase === "it-ot-pivot") {
-        session.phase = "process-control";
-      }
+      advancePhase(session, "process-control");
     } else {
       session.scoreState = applyEvent(session.scoreState, { type: "unintended-load-affected" });
     }
@@ -136,7 +153,7 @@ export function toggleBreaker(
   if (achievedNow && !session.requiredEffectAchieved) {
     session.requiredEffectAchieved = true;
     session.scoreState = applyEvent(session.scoreState, { type: "required-grid-state-achieved" });
-    session.phase = "physical-effect";
+    advancePhase(session, "physical-effect");
   }
 
   return session;
@@ -152,7 +169,7 @@ const PHASE_ON_EVENT: Partial<Record<ScoreEventType, MissionPhase>> = {
 export function recordEvent(session: SessionState, type: ScoreEventType): SessionState {
   session.scoreState = applyEvent(session.scoreState, { type });
   const nextPhase = PHASE_ON_EVENT[type];
-  if (nextPhase) session.phase = nextPhase;
+  if (nextPhase) advancePhase(session, nextPhase);
   return session;
 }
 
