@@ -30,10 +30,16 @@
 
   mkdir -p /shared/vpn
   if [ -f /config/peer1/peer1.conf ]; then
+    # Drop the DNS line entirely rather than trust PEERDNS=off — the image
+    # writes it as the literal (invalid) "DNS = off" instead of omitting
+    # it, and any DNS value at all makes wg-quick depend on resolvconf,
+    # which several common distros (e.g. Kali) don't ship by default and
+    # which aborts the whole `wg-quick up` if missing. The lab has nothing
+    # meaningful to resolve over that DNS entry anyway.
     if [ -n "$OT_DMZ_CIDR" ]; then
-      sed "s#^AllowedIPs.*#AllowedIPs = 10.13.13.0/24, ${OT_DMZ_CIDR}#" /config/peer1/peer1.conf > /shared/vpn/client1.conf
+      sed "s#^AllowedIPs.*#AllowedIPs = 10.13.13.0/24, ${OT_DMZ_CIDR}#" /config/peer1/peer1.conf | grep -v '^DNS' > /shared/vpn/client1.conf
     else
-      cp /config/peer1/peer1.conf /shared/vpn/client1.conf
+      grep -v '^DNS' /config/peer1/peer1.conf > /shared/vpn/client1.conf
     fi
     echo "[lab-routing] published client1.conf for employee-workstation"
   fi

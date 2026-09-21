@@ -81,7 +81,11 @@ services:
       SERVERPORT: "51820"
       PEERS: "1"
       SERVERURL: ${WIREGUARD_SERVERURL:-auto}
-      PEERDNS: auto
+      # Whatever this is set to, ot/wireguard/custom-cont-init.d strips any
+      # DNS line from the published peer config anyway — the image writes
+      # "DNS = off" literally rather than omitting the line when this is
+      # "off", which is itself invalid and would still break wg-quick.
+      PEERDNS: "off"
       INTERNAL_SUBNET: 10.13.13.0
     volumes:
       - wireguard-config:/config
